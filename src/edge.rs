@@ -25,7 +25,8 @@ impl<NodeData, EdgeData> Edge<NodeData, EdgeData> {
     }
 }
 impl<NodeData, EdgeData: Default> Edge<NodeData, EdgeData> {
+    #[must_use]
     pub fn new_with_default(start: GPtr<Node<NodeData>>, end: GPtr<Node<NodeData>>) -> Self {
-        Edge::new(start, end, EdgeData::default())
+        Self::new(start, end, EdgeData::default())
     }
 }

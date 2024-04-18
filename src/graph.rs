@@ -8,7 +8,14 @@ pub struct Graph<ND, ED> {
     bounds: macroquad::math::Rect,
     dragging: Option<GPtr<Node<ND>>>,
 }
+impl<ND, ED> Default for Graph<ND, ED> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<ND, ED> Graph<ND, ED> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             nodes: Vec::new(),
@@ -28,6 +35,7 @@ impl<ND, ED> Graph<ND, ED> {
             _marker: std::marker::PhantomData,
         }
     }
+    #[must_use]
     pub fn get_node_with_meta(
         &self,
         ptr: GPtr<Node<ND>>,
@@ -40,12 +48,14 @@ impl<ND, ED> Graph<ND, ED> {
     ) -> Option<&mut (Node<ND>, Vec<GPtr<Edge<ND, ED>>>, Vec2)> {
         self.nodes.get_mut(ptr.idx as usize)
     }
+    #[must_use]
     pub fn get_node(&self, ptr: GPtr<Node<ND>>) -> Option<&Node<ND>> {
         self.get_node_with_meta(ptr).map(|f| &f.0)
     }
     pub fn get_node_mut(&mut self, ptr: GPtr<Node<ND>>) -> Option<&mut Node<ND>> {
         self.get_node_with_meta_mut(ptr).map(|f| &mut f.0)
     }
+    #[must_use]
     pub fn get_node_edges(
         &self,
         ptr: GPtr<Node<ND>>,
@@ -73,6 +83,7 @@ impl<ND, ED> Graph<ND, ED> {
         }
         edge_ptr
     }
+    #[must_use]
     pub fn get_edge(&self, edge: GPtr<Edge<ND, ED>>) -> Option<&Edge<ND, ED>> {
         self.edges.get(edge.idx as usize)
     }
@@ -119,7 +130,7 @@ impl<ND, ED> Graph<ND, ED> {
             })
             .collect::<Vec<_>>();
         let mut bounds = macroquad::math::Rect::default();
-        let mut diff_iter = diffs.into_iter().zip(riffs.into_iter());
+        let mut diff_iter = diffs.into_iter().zip(riffs);
 
         let mouse_pos = macroquad::input::mouse_position_local()
             .mul_add(Vec2::new(0.5, -0.5), Vec2::splat(0.5))
@@ -139,13 +150,14 @@ impl<ND, ED> Graph<ND, ED> {
             }
             // node.2 *= 0.9;
 
-            if drag_new && self.dragging.is_none() {
-                if mouse_pos.distance_squared(node.2) < (node.0.radius * node.0.radius) {
-                    self.dragging = Some(GPtr {
-                        idx: node_idx as u32,
-                        _marker: std::marker::PhantomData,
-                    });
-                }
+            if drag_new
+                && self.dragging.is_none()
+                && mouse_pos.distance_squared(node.2) < (node.0.radius * node.0.radius)
+            {
+                self.dragging = Some(GPtr {
+                    idx: node_idx as u32,
+                    _marker: std::marker::PhantomData,
+                });
             }
 
             bounds = bounds.combine_with(macroquad::math::Rect::new(
@@ -185,8 +197,8 @@ impl<ND, ED> Graph<ND, ED> {
         let heigh_offset = display_rect.h - new_height;
 
         macroquad::math::Rect::new(
-            display_rect.x + width_offset * 0.5,
-            display_rect.y + heigh_offset * 0.5,
+            width_offset.mul_add(0.5, display_rect.x),
+            heigh_offset.mul_add(0.5, display_rect.y),
             new_width,
             new_height,
         )
@@ -197,13 +209,13 @@ impl<ND, ED> Graph<ND, ED> {
         macroquad::camera::push_camera_state();
         macroquad::camera::set_camera(&view);
 
-        for edge in self.edges.iter() {
+        for edge in &self.edges {
             if edge.end == edge.start {
                 let (node, _, v) = self.get_node_with_meta(edge.start).unwrap();
                 // macroquad::shapes::draw_ellipse inlined to reduce splitting.
                 {
                     let x = v.x;
-                    let y = v.y + node.radius * 2.0;
+                    let y = node.radius.mul_add(2.0, v.y);
                     let w = node.radius;
                     let h = node.radius * 2.0;
                     let thickness = edge.thickness;
@@ -218,8 +230,8 @@ impl<ND, ED> Graph<ND, ED> {
                         let ry = (i as f32 / sides as f32 * std::f32::consts::PI * 2.).sin();
                         let px = w * rx;
                         let py = h * ry;
-                        let rotated_x = px * cr - py * sr;
-                        let rotated_y = py * cr + px * sr;
+                        let rotated_x = px.mul_add(cr, -(py * sr));
+                        let rotated_y = py.mul_add(cr, px * sr);
 
                         let p0 = Vec2::new(x + rotated_x, y + rotated_y);
 
@@ -227,8 +239,8 @@ impl<ND, ED> Graph<ND, ED> {
                         let ry = ((i + 1) as f32 / sides as f32 * std::f32::consts::PI * 2.).sin();
                         let px = w * rx;
                         let py = h * ry;
-                        let rotated_x = px * cr - py * sr;
-                        let rotated_y = py * cr + px * sr;
+                        let rotated_x = px.mul_add(cr, -(py * sr));
+                        let rotated_y = py.mul_add(cr, px * sr);
 
                         let p1 = Vec2::new(x + rotated_x, y + rotated_y).lerp(p0, -0.2);
 
@@ -243,7 +255,7 @@ impl<ND, ED> Graph<ND, ED> {
             }
         }
 
-        for node in self.nodes.iter() {
+        for node in &self.nodes {
             let pos = node.2;
             let node = &node.0;
             match node.shape {

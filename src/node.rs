@@ -1,4 +1,4 @@
-use macroquad::{color::Color, math::Vec2};
+use macroquad::color::Color;
 pub enum Shape {
     Circle,
     Square,
@@ -16,6 +16,7 @@ pub struct Node<NodeData> {
     pub data: NodeData,
 }
 impl<ND: Default> Node<ND> {
+    #[must_use]
     pub fn new() -> Self {
         Self::from_data(ND::default())
     }
