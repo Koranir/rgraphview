@@ -1,0 +1,10 @@
+[package]
+name = "rgraphview"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bumpalo = { version = "3.16.0", features = ["allocator_api", "std"] }
+glam = "0.27.0"
+macroquad = { version = "0.4.5", features = ["log-rs"] }
+smallvec = "1.13.2"
