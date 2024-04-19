@@ -2,11 +2,13 @@ use macroquad::{math::Vec2, rand::gen_range};
 
 use crate::{Edge, Node};
 
+#[derive(Debug)]
 pub struct Graph<ND, ED> {
     nodes: Vec<(Node<ND>, Vec<GPtr<Edge<ND, ED>>>, macroquad::math::Vec2)>,
     edges: Vec<Edge<ND, ED>>,
     bounds: macroquad::math::Rect,
     dragging: Option<GPtr<Node<ND>>>,
+    font: Option<macroquad::text::Font>,
 }
 impl<ND, ED> Default for Graph<ND, ED> {
     fn default() -> Self {
@@ -27,6 +29,7 @@ impl<ND, ED> Graph<ND, ED> {
                 h: 1000.0,
             },
             dragging: None,
+            font: None,
         }
     }
     pub fn add_node(&mut self, node: Node<ND>) -> GPtr<Node<ND>> {
@@ -96,6 +99,12 @@ impl<ND, ED> Graph<ND, ED> {
         self.edges.get_mut(edge.idx as usize)
     }
 
+    pub fn reset(&mut self) {
+        self.nodes = Vec::new();
+        self.edges = Vec::new();
+        self.dragging = None;
+    }
+
     pub fn step(&mut self) {
         let diffs = self
             .nodes
@@ -106,9 +115,9 @@ impl<ND, ED> Graph<ND, ED> {
                     .iter()
                     .map(|f| {
                         let diff_vec = pos - f.2;
+                        let mag = 17.2 - diff_vec.length_squared().log2();
 
-                        diff_vec.normalize_or_zero()
-                            * (20.0 - diff_vec.length_squared().log2()).max(-0.01)
+                        diff_vec.normalize_or_zero() * mag.max(0.0)
                     })
                     .filter(|d| d.is_finite())
                     .reduce(|acc, ele| acc + ele)
@@ -139,7 +148,7 @@ impl<ND, ED> Graph<ND, ED> {
         let mut diff_iter = diffs.into_iter().zip(riffs);
 
         let mouse_pos = macroquad::input::mouse_position_local()
-            .mul_add(Vec2::new(0.5, -0.5), Vec2::splat(0.5))
+            .mul_add(Vec2::new(0.5, /*-*/ 0.5), Vec2::splat(0.5))
             * self.bounds.size()
             + self.bounds.point();
 
@@ -211,8 +220,13 @@ impl<ND, ED> Graph<ND, ED> {
         )
     }
 
+    pub fn set_font(&mut self, font: macroquad::text::Font) -> Option<macroquad::prelude::Font> {
+        self.font.replace(font)
+    }
+
     pub fn draw(&self) {
-        let view = macroquad::camera::Camera2D::from_display_rect(self.bounds);
+        let mut view = macroquad::camera::Camera2D::from_display_rect(self.bounds);
+        view.zoom.y *= -1.0;
         macroquad::camera::push_camera_state();
         macroquad::camera::set_camera(&view);
 
@@ -286,24 +300,70 @@ impl<ND, ED> Graph<ND, ED> {
                 }
             }
             if let Some(label) = &node.label {
-                macroquad::text::draw_text(
+                let center = macroquad::text::get_text_center(
                     &label,
-                    pos.x,
-                    pos.y,
-                    18.0,
-                    macroquad::color::Color::new(
-                        1.0 - node.color.r,
-                        1.0 - node.color.g,
-                        1.0 - node.color.b,
-                        node.color.a,
-                    ),
+                    self.font.as_ref(),
+                    node.radius as u16,
+                    1.0,
+                    0.0,
+                );
+                let draw_text_outline = |x, y| {
+                    macroquad::text::draw_text_ex(
+                        &label,
+                        pos.x - center.x + x,
+                        pos.y - center.y + y,
+                        macroquad::text::TextParams {
+                            font: self.font.as_ref(),
+                            font_size: node.radius as u16,
+                            font_scale: 1.0,
+                            font_scale_aspect: 1.0,
+                            rotation: 0.0,
+                            // color: macroquad::color::Color::new(
+                            //     1.0 - node.color.r,
+                            //     1.0 - node.color.g,
+                            //     1.0 - node.color.b,
+                            //     node.color.a,
+                            // ),
+                            color: macroquad::color::BLACK,
+                        },
+                    )
+                };
+                for (x, y) in [(-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0)] {
+                    draw_text_outline(x, y);
+                }
+                macroquad::text::draw_text_ex(
+                    &label,
+                    pos.x - center.x,
+                    pos.y - center.y,
+                    macroquad::text::TextParams {
+                        font: self.font.as_ref(),
+                        font_size: node.radius as u16,
+                        font_scale: 1.0,
+                        font_scale_aspect: 1.0,
+                        rotation: 0.0,
+                        // color: macroquad::color::Color::new(
+                        //     node.color.r,
+                        //     node.color.g,
+                        //     node.color.b,
+                        //     node.color.a,
+                        // ),
+                        color: macroquad::color::WHITE,
+                    },
                 );
             }
         }
         macroquad::camera::pop_camera_state();
     }
+
+    pub fn nodes(&self) -> impl Iterator<Item = &Node<ND>> {
+        self.nodes.iter().map(|f| &f.0)
+    }
+    pub fn edges(&self) -> impl Iterator<Item = &Edge<ND, ED>> {
+        self.edges.iter()
+    }
 }
 
+#[derive(Debug)]
 pub struct GPtr<T> {
     pub(crate) idx: u32,
     _marker: std::marker::PhantomData<T>,

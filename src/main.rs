@@ -25,13 +25,38 @@ pub extern "C" fn create_edge(start: u32, end: u32, data: sapp_jsutils::JsObject
 }
 
 #[no_mangle]
-pub extern "C" fn set_node(node: u32, with: sapp_jsutils::JsObject) {
+pub extern "C" fn node_edges(node: u32) -> sapp_jsutils::JsObject {
+    GRAPH.with_borrow(|g| {
+        let edges = g
+            .get_node_with_meta(unsafe { rgraphview::graph::GPtr::from_index(node) })
+            .unwrap()
+            .1
+            .iter()
+            .map(|f| unsafe { f.get_index() })
+            .flat_map(|f| f.to_be_bytes())
+            .collect::<Vec<_>>();
+        sapp_jsutils::JsObject::buffer(&edges)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn set_node(node_idx: u32, with: sapp_jsutils::JsObject) {
     unsafe {
         GRAPH.with_borrow_mut(|g| {
-            let node = g
-                .get_node_mut(rgraphview::graph::GPtr::from_index(node))
-                .unwrap();
+            let Some(node) = g.get_node_mut(rgraphview::graph::GPtr::from_index(node_idx)) else {
+                panic!(
+                    "Node {node_idx} was not in the graph: {:?}",
+                    g.nodes().enumerate().fold(String::new(), |s, (id, n)| {
+                        s + &format!("[{id}: {n:?}],")
+                    })
+                )
+            };
             let mut string = String::new();
+
+            if with.is_nil() {
+                eprintln!("Node {node_idx} was nil");
+                return;
+            }
 
             if with.have_field("shape") {
                 with.field("shape").to_string(&mut string);
@@ -65,8 +90,61 @@ pub extern "C" fn set_node(node: u32, with: sapp_jsutils::JsObject) {
                 string.clear();
                 node.set_color(color);
             }
+            if with.have_field("label") {
+                with.field("label").to_string(&mut string);
+                node.set_label(Some(string));
+            }
         })
     }
+}
+
+#[no_mangle]
+extern "C" fn set_edge(edge_idx: u32, with: sapp_jsutils::JsObject) {
+    unsafe {
+        GRAPH.with_borrow_mut(|g| {
+            let Some(edge) = g.get_edge_mut(rgraphview::graph::GPtr::from_index(edge_idx)) else {
+                panic!(
+                    "Edge {edge_idx} was not in the graph: {:?}",
+                    g.edges().enumerate().fold(String::new(), |s, (id, n)| {
+                        s + &format!("[{id}: {n:?}],")
+                    })
+                )
+            };
+            let mut string = String::new();
+
+            if with.is_nil() {
+                eprintln!("Edge {edge_idx} was nil");
+                return;
+            }
+            if with.have_field("color") {
+                with.field("color").to_string(&mut string);
+                string.make_ascii_lowercase();
+                let color = match string.as_str() {
+                    "red" => macroquad::color::RED,
+                    _ => {
+                        let hex = with.field_u32("color");
+                        macroquad::color::Color::from_hex(hex)
+                    }
+                };
+                string.clear();
+                edge.set_color(color);
+            }
+            if with.have_field("thickness") {
+                edge.set_thickness(with.field_f32("thickness"));
+            }
+            if with.have_field("label") {
+                with.field("label").to_string(&mut string);
+                edge.set_label(Some(string));
+            }
+        });
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn reset_graph() {
+    GRAPH.with_borrow_mut(|graph| {
+        graph.reset();
+    })
 }
 
 #[rgraphview::main("RGraphView")]
@@ -84,10 +162,19 @@ async fn main() {
         });
     });
 
+    let arial_ttf = macroquad::text::load_ttf_font("Roboto-Medium.ttf")
+        .await
+        .unwrap();
+    GRAPH.with_borrow_mut(|graph| {
+        graph.set_font(arial_ttf);
+    });
+
     loop {
         macroquad::window::clear_background(macroquad::color::WHITE);
-        GRAPH.with_borrow_mut(|g| g.step());
-        GRAPH.with_borrow(|g| g.draw());
+        GRAPH.with_borrow_mut(|g| {
+            g.step();
+            g.draw();
+        });
         macroquad::window::next_frame().await;
     }
 }
