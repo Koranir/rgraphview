@@ -16,11 +16,16 @@ impl<ND, ED> Default for Graph<ND, ED> {
 
 impl<ND, ED> Graph<ND, ED> {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             nodes: Vec::new(),
             edges: Vec::new(),
-            bounds: macroquad::math::Rect::new(-500.0, -500.0, 1000.0, 1000.0),
+            bounds: macroquad::math::Rect {
+                x: -500.0,
+                y: -500.0,
+                w: 1000.0,
+                h: 1000.0,
+            },
             dragging: None,
         }
     }
@@ -102,7 +107,8 @@ impl<ND, ED> Graph<ND, ED> {
                     .map(|f| {
                         let diff_vec = pos - f.2;
 
-                        diff_vec.normalize_or_zero() * (20.0 - diff_vec.length_squared().log2())
+                        diff_vec.normalize_or_zero()
+                            * (20.0 - diff_vec.length_squared().log2()).max(-0.01)
                     })
                     .filter(|d| d.is_finite())
                     .reduce(|acc, ele| acc + ele)
@@ -129,7 +135,7 @@ impl<ND, ED> Graph<ND, ED> {
                     .reduce(|acc, f| acc + f)
             })
             .collect::<Vec<_>>();
-        let mut bounds = macroquad::math::Rect::default();
+        let mut bounds: Option<macroquad::prelude::Rect> = None;
         let mut diff_iter = diffs.into_iter().zip(riffs);
 
         let mouse_pos = macroquad::input::mouse_position_local()
@@ -145,10 +151,10 @@ impl<ND, ED> Graph<ND, ED> {
 
         for (node_idx, node) in self.nodes.iter_mut().enumerate() {
             if let Some((diff, riff)) = diff_iter.next() {
-                node.2 += diff.unwrap_or_default() * 0.5;
+                node.2 += diff.unwrap_or_default();
                 node.2 += riff.unwrap_or_default();
             }
-            // node.2 *= 0.9;
+            // node.2 *= 0.99;
 
             if drag_new
                 && self.dragging.is_none()
@@ -160,12 +166,13 @@ impl<ND, ED> Graph<ND, ED> {
                 });
             }
 
-            bounds = bounds.combine_with(macroquad::math::Rect::new(
-                node.2.x,
-                node.2.y,
-                node.0.radius,
-                node.0.radius,
-            ));
+            let new = macroquad::math::Rect::new(node.2.x, node.2.y, node.0.radius, node.0.radius);
+
+            if let Some(bound) = &mut bounds {
+                *bound = bound.combine_with(new);
+            } else {
+                bounds = Some(new);
+            }
         }
 
         if let Some(ptr) = self.dragging {
@@ -173,7 +180,7 @@ impl<ND, ED> Graph<ND, ED> {
         }
 
         let aspect = macroquad::window::screen_width() / macroquad::window::screen_height();
-        self.bounds = Self::scale_aspect(bounds, aspect, 1.2);
+        self.bounds = Self::scale_aspect(bounds.unwrap_or_default(), aspect, 1.2);
     }
 
     fn scale_aspect(
@@ -278,6 +285,20 @@ impl<ND, ED> Graph<ND, ED> {
                     macroquad::shapes::draw_triangle(v1, v2, v3, node.color);
                 }
             }
+            if let Some(label) = &node.label {
+                macroquad::text::draw_text(
+                    &label,
+                    pos.x,
+                    pos.y,
+                    18.0,
+                    macroquad::color::Color::new(
+                        1.0 - node.color.r,
+                        1.0 - node.color.g,
+                        1.0 - node.color.b,
+                        node.color.a,
+                    ),
+                );
+            }
         }
         macroquad::camera::pop_camera_state();
     }
@@ -286,6 +307,18 @@ impl<ND, ED> Graph<ND, ED> {
 pub struct GPtr<T> {
     pub(crate) idx: u32,
     _marker: std::marker::PhantomData<T>,
+}
+impl<T> GPtr<T> {
+    pub unsafe fn get_index(&self) -> u32 {
+        self.idx
+    }
+
+    pub unsafe fn from_index(idx: u32) -> Self {
+        Self {
+            idx,
+            _marker: std::marker::PhantomData,
+        }
+    }
 }
 impl<T> PartialEq for GPtr<T> {
     fn eq(&self, other: &Self) -> bool {

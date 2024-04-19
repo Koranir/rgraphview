@@ -6,6 +6,7 @@ pub enum Shape {
 }
 
 pub struct Node<NodeData> {
+    pub label: Option<String>,
     /// The shape of the node.
     pub shape: Shape,
     /// The fill color of the node.
@@ -33,6 +34,7 @@ impl<NodeData> Node<NodeData> {
             color: Color::new(0.0, 0.0, 0.0, 1.0),
             radius: 25.0,
             data,
+            label: None,
         }
     }
 
@@ -52,6 +54,10 @@ impl<NodeData> Node<NodeData> {
     pub fn with_data(self, data: NodeData) -> Self {
         Self { data, ..self }
     }
+    #[must_use = "The return value has the changed data."]
+    pub fn with_label(self, label: Option<String>) -> Self {
+        Self { label, ..self }
+    }
 
     pub fn set_shape(&mut self, shape: Shape) -> &mut Self {
         self.shape = shape;
@@ -67,6 +73,10 @@ impl<NodeData> Node<NodeData> {
     }
     pub fn set_data(&mut self, data: NodeData) -> &mut Self {
         self.data = data;
+        self
+    }
+    pub fn set_label(&mut self, label: Option<String>) -> &mut Self {
+        self.label = label;
         self
     }
 }
