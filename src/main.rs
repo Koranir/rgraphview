@@ -9,6 +9,142 @@ thread_local! {
 }
 
 #[no_mangle]
+pub extern "C" fn get_node_data(node: u32) -> sapp_jsutils::JsObjectWeak {
+    GRAPH.with_borrow(|g| {
+        g.get_node(unsafe { rgraphview::graph::GPtr::from_index(node) })
+            .unwrap()
+            .data
+            .weak()
+    })
+}
+#[no_mangle]
+pub extern "C" fn get_node_color(node: u32) -> sapp_jsutils::JsObject {
+    sapp_jsutils::JsObject::string(unsafe {
+        let [r, g, b, a]: [u8; 4] = GRAPH
+            .with_borrow(|g| {
+                g.get_node(rgraphview::graph::GPtr::from_index(node))
+                    .unwrap()
+                    .color
+            })
+            .into();
+        &format!("#{:02X}{:02X}{:02X}{:02X}", r, g, b, a)
+    })
+}
+#[no_mangle]
+pub extern "C" fn get_node_radius(node: u32) -> f32 {
+    unsafe {
+        GRAPH.with_borrow(|g| {
+            g.get_node(rgraphview::graph::GPtr::from_index(node))
+                .unwrap()
+                .radius
+        })
+    }
+}
+#[no_mangle]
+pub extern "C" fn get_node_label(node: u32) -> sapp_jsutils::JsObject {
+    unsafe {
+        GRAPH.with_borrow(|g| {
+            sapp_jsutils::JsObject::string(
+                g.get_node(rgraphview::graph::GPtr::from_index(node))
+                    .unwrap()
+                    .label
+                    .as_ref()
+                    .map(|s| s.as_str())
+                    .unwrap_or(""),
+            )
+        })
+    }
+}
+#[no_mangle]
+pub extern "C" fn get_node_shape(node: u32) -> sapp_jsutils::JsObject {
+    unsafe {
+        GRAPH.with_borrow(|g| {
+            sapp_jsutils::JsObject::string(
+                match g
+                    .get_node(rgraphview::graph::GPtr::from_index(node))
+                    .unwrap()
+                    .shape
+                {
+                    rgraphview::node::Shape::Circle => "circle",
+                    rgraphview::node::Shape::Square => "square",
+                    rgraphview::node::Shape::Triangle => "triangle",
+                },
+            )
+        })
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_edge_data(edge: u32) -> sapp_jsutils::JsObjectWeak {
+    GRAPH.with_borrow(|g| {
+        g.get_edge(unsafe { rgraphview::graph::GPtr::from_index(edge) })
+            .unwrap()
+            .data
+            .weak()
+    })
+}
+#[no_mangle]
+pub extern "C" fn get_edge_thickness(edge: u32) -> f32 {
+    unsafe {
+        GRAPH.with_borrow(|g| {
+            g.get_edge(rgraphview::graph::GPtr::from_index(edge))
+                .unwrap()
+                .thickness
+        })
+    }
+}
+#[no_mangle]
+pub extern "C" fn get_edge_label(edge: u32) -> sapp_jsutils::JsObject {
+    unsafe {
+        GRAPH.with_borrow(|g| {
+            sapp_jsutils::JsObject::string(
+                g.get_edge(rgraphview::graph::GPtr::from_index(edge))
+                    .unwrap()
+                    .label
+                    .as_ref()
+                    .map(|s| s.as_str())
+                    .unwrap_or(""),
+            )
+        })
+    }
+}
+#[no_mangle]
+pub extern "C" fn get_edge_color(edge: u32) -> u32 {
+    unsafe {
+        let rgba: [u8; 4] = GRAPH
+            .with_borrow(|g| {
+                g.get_edge(rgraphview::graph::GPtr::from_index(edge))
+                    .unwrap()
+                    .color
+            })
+            .into();
+        std::mem::transmute(rgba)
+    }
+}
+#[no_mangle]
+pub extern "C" fn get_edge_start(edge: u32) -> u32 {
+    unsafe {
+        GRAPH.with_borrow(|g| {
+            g.get_edge(rgraphview::graph::GPtr::from_index(edge))
+                .unwrap()
+                .start
+                .get_index()
+        })
+    }
+}
+#[no_mangle]
+pub extern "C" fn get_edge_end(edge: u32) -> u32 {
+    unsafe {
+        GRAPH.with_borrow(|g| {
+            g.get_edge(rgraphview::graph::GPtr::from_index(edge))
+                .unwrap()
+                .end
+                .get_index()
+        })
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn create_node(data: sapp_jsutils::JsObject) -> u32 {
     let node = rgraphview::Node::from_data(data);
     unsafe { GRAPH.with_borrow_mut(|g| g.add_node(node)).get_index() }
@@ -33,7 +169,20 @@ pub extern "C" fn node_edges(node: u32) -> sapp_jsutils::JsObject {
             .1
             .iter()
             .map(|f| unsafe { f.get_index() })
-            .flat_map(|f| f.to_be_bytes())
+            .flat_map(|f| f.to_ne_bytes())
+            .collect::<Vec<_>>();
+        sapp_jsutils::JsObject::buffer(&edges)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn get_nodes() -> sapp_jsutils::JsObject {
+    GRAPH.with_borrow(|g| {
+        let edges = g
+            .nodes()
+            .enumerate()
+            .map(|(idx, _f)| idx)
+            .flat_map(|f| f.to_ne_bytes())
             .collect::<Vec<_>>();
         sapp_jsutils::JsObject::buffer(&edges)
     })
@@ -80,8 +229,11 @@ pub extern "C" fn set_node(node_idx: u32, with: sapp_jsutils::JsObject) {
             if with.have_field("color") {
                 with.field("color").to_string(&mut string);
                 string.make_ascii_lowercase();
-                let color = match string.as_str() {
+                let color = match string.as_str().trim() {
                     "red" => macroquad::color::RED,
+                    s if s.starts_with('#') => {
+                        macroquad::color::Color::from_hex(u32::from_str_radix(&s[1..], 16).unwrap())
+                    }
                     _ => {
                         let hex = with.field_u32("color");
                         macroquad::color::Color::from_hex(hex)

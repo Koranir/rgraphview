@@ -163,7 +163,6 @@ impl<ND, ED> Graph<ND, ED> {
                 node.2 += diff.unwrap_or_default();
                 node.2 += riff.unwrap_or_default();
             }
-            // node.2 *= 0.99;
 
             if drag_new
                 && self.dragging.is_none()
@@ -236,7 +235,7 @@ impl<ND, ED> Graph<ND, ED> {
                 // macroquad::shapes::draw_ellipse inlined to reduce splitting.
                 {
                     let x = v.x;
-                    let y = node.radius.mul_add(2.0, v.y);
+                    let y = v.y - node.radius * 2.0;
                     let w = node.radius;
                     let h = node.radius * 2.0;
                     let thickness = edge.thickness;

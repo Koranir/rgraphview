@@ -4,9 +4,9 @@ use crate::{graph::GPtr, Node};
 
 pub struct Edge<NodeData, EdgeData> {
     /// The start node.
-    pub(crate) start: GPtr<Node<NodeData>>,
+    pub start: GPtr<Node<NodeData>>,
     /// The end node.
-    pub(crate) end: GPtr<Node<NodeData>>,
+    pub end: GPtr<Node<NodeData>>,
     /// User-defined data.
     pub data: EdgeData,
 
