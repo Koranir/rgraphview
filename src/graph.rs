@@ -115,7 +115,7 @@ impl<ND, ED> Graph<ND, ED> {
                     .iter()
                     .map(|f| {
                         let diff_vec = pos - f.2;
-                        let mag = 17.2 - diff_vec.length_squared().log2();
+                        let mag = /*17.2*/ f.0.radius.log2() * 3.5 - diff_vec.length_squared().log2();
 
                         diff_vec.normalize_or_zero() * mag.max(0.0)
                     })
@@ -284,17 +284,17 @@ impl<ND, ED> Graph<ND, ED> {
                 }
                 crate::node::Shape::Square => {
                     macroquad::shapes::draw_rectangle(
-                        pos.x,
-                        pos.y,
-                        node.radius,
-                        node.radius,
+                        pos.x - node.radius,
+                        pos.y - node.radius,
+                        node.radius * 2.0,
+                        node.radius * 2.0,
                         node.color,
                     );
                 }
                 crate::node::Shape::Triangle => {
-                    let v1 = pos + Vec2::new(0.0, node.radius / 2.0);
-                    let v2 = pos + Vec2::new(node.radius / 2.0, -node.radius / 2.0);
-                    let v3 = pos + Vec2::new(-node.radius / 2.0, -node.radius / 2.0);
+                    let v1 = pos + Vec2::new(0.0, -node.radius * 1.5);
+                    let v2 = pos + Vec2::new(node.radius * 1.33, node.radius * 0.5);
+                    let v3 = pos + Vec2::new(-node.radius * 1.33, node.radius * 0.5);
                     macroquad::shapes::draw_triangle(v1, v2, v3, node.color);
                 }
             }
