@@ -26,7 +26,19 @@ pub extern "C" fn graph_nodes() -> sapp_jsutils::JsObject {
         let edges = g
             .nodes()
             .enumerate()
-            .map(|(idx, _f)| idx)
+            .map(|(idx, _)| idx)
+            .flat_map(|f| f.to_ne_bytes())
+            .collect::<Vec<_>>();
+        sapp_jsutils::JsObject::buffer(&edges)
+    })
+}
+#[no_mangle]
+pub extern "C" fn graph_edges() -> sapp_jsutils::JsObject {
+    GRAPH.with_borrow(|g| {
+        let edges = g
+            .edges()
+            .enumerate()
+            .map(|(idx, _)| idx)
             .flat_map(|f| f.to_ne_bytes())
             .collect::<Vec<_>>();
         sapp_jsutils::JsObject::buffer(&edges)

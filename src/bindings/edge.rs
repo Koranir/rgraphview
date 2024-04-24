@@ -57,15 +57,15 @@ pub unsafe extern "C" fn edge_set_label(edge: u32, label: sapp_jsutils::JsObject
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn edge_get_color(edge: u32) -> u32 {
-    let rgba: [u8; 4] = GRAPH
+pub unsafe extern "C" fn edge_get_color(edge: u32) -> sapp_jsutils::JsObject {
+    let [r, g, b, a]: [u8; 4] = GRAPH
         .with_borrow(|g| {
             g.get_edge(rgraphview::graph::GPtr::from_index(edge))
                 .unwrap()
                 .color
         })
         .into();
-    std::mem::transmute(rgba)
+    sapp_jsutils::JsObject::string(&format!("#{:02X}{:02X}{:02X}{:02X}", r, g, b, a))
 }
 #[no_mangle]
 pub unsafe extern "C" fn edge_set_color(edge: u32, color: sapp_jsutils::JsObject) {

@@ -47,11 +47,54 @@ class Node {
   }
 }
 
+class Edge {
+  constructor(edge_idx) {
+    this.edge_idx = edge_idx;
+  }
 
+  get data() {
+    return get_js_object(wasm_exports.edge_get_data(this.edge_idx));
+  }
+  set data(data) {
+    let obj = get_js_object(wasm_exports.edge_get_data(this.edge_idx));
+    obj = data;
+  }
+
+  get thickness() {
+    return wasm_exports.edge_get_thickness(this.edge_idx);
+  }
+  set thickness(thickness) {
+    wasm_exports.edge_set_thickness(this.edge_idx, thickness);
+  }
+
+  get label() {
+    return consume_js_object(edge_get_label(this.edge_idx));
+  }
+  set label(label) {
+    wasm_exports.edge_set_label(this.edge_idx, js_object(label));
+  }
+
+  get color() {
+    return consume_js_object(wasm_exports.edge_get_color(this.edge_idx));
+  }
+  set color(color) {
+    wasm_exports.edge_set_color(this.edge_idx, js_object(color));
+  }
+
+  get start() {
+    return wasm_exports.edge_get_start(this.edge_idx);
+  }
+  get end() {
+    return wasm_exports.edge_get_end(this.edge_idx);
+  }
+}
 
 class Graph {
   static nodes() {
-    return new Uint32Array(consume_js_object(wasm_exports.graph_nodes()).buffer);
+    return Array.from(new Uint32Array(consume_js_object(wasm_exports.graph_nodes()).buffer), (x) => new Node(x));
+  }
+  static edges() {
+    return Array.from(new Uint32Array(consume_js_object(wasm_exports.graph_edges()).buffer), (x) => new Edge(x));
   }
   
   static add_node(properties) {
@@ -59,11 +102,11 @@ class Graph {
     // wasm_exports.set_node(node_idx, js_object(properties));
     return node;
   }
-  // add_edge(start, end, properties) {
-  //   const edge_idx = wasm_exports.graph_make_edge(start, end);
-  //   wasm_exports.set_edge(edge_idx, js_object(with_feats));
-  //   return edge_idx;
-  // }
+  static add_edge(start, end, properties) {
+    const edge = new Edge(wasm_exports.graph_make_edge(start, end));
+    // wasm_exports.set_edge(edge_idx, js_object(with_feats));
+    return edge;
+  }
 }
 
 // function add_edge(start, end, with_feats) {

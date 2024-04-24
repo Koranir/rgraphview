@@ -4,28 +4,35 @@
 <head>
     <meta charset="utf-8">
     <title>RGraphView</title>
-    <style>
-        html,
-        body,
-        canvas {
-            margin: 0px;
-            padding: 0px;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            position: absolute;
-            background: black;
-            z-index: 0;
-        }
-    </style>
+    <!--In the <head>-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/WebCoder49/code-input@2.2/code-input.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebCoder49/code-input@2.2/code-input.min.css">
 </head>
 
 <body>
-    <canvas id="glcanvas" tabindex='1'></canvas>
-    <!-- Minified and statically hosted version of https://github.com/not-fl3/macroquad/blob/master/js/mq_js_bundle.js -->
+    <table style="width:100%; height:100%; text-align: left;">
+        <tr>
+            <th style="width:100%; height:100%"><canvas style="width:100%; height:100%; position:absolute;"id="glcanvas" tabindex='1'></canvas></th>
+            <th><code-input language="js"></code-input></th>
+        </tr>
+    </table>
     <script src="https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js"></script>
-    <script>load("rgraphview.wasm");</script> <!-- Your compiled wasm file -->
+    <script>load("rgraphview.wasm");</script>
     <script src="bindings.js"></script>
+
+    <script>
+      codeInput.registerTemplate("syntax-highlighted", 
+        codeInput.templates.hljs(
+          hljs, 
+          [
+            <!-- new codeInput.plugins.Autodetect(), --> 
+            <!-- new codeInput.plugins.Indent(true, 2) // 2 spaces indentation -->
+          ]
+        )
+      );
+    </script>
 </body>
 
 </html>
