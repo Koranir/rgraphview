@@ -107,6 +107,11 @@ class Graph {
     // wasm_exports.set_edge(edge_idx, js_object(with_feats));
     return edge;
   }
+
+  static reset() {
+    wasm_exports.graph_reset();
+    js_objects = [];
+  }
 }
 
 // function add_edge(start, end, with_feats) {
