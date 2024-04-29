@@ -108,7 +108,7 @@ class Graph {
     return edge;
   }
 
-  static reset() {
+  static clear() {
     wasm_exports.graph_reset();
     js_objects = [];
   }

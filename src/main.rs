@@ -29,7 +29,7 @@ async fn main() {
     });
 
     loop {
-        macroquad::window::clear_background(macroquad::color::WHITE);
+        macroquad::window::clear_background(macroquad::color::Color::new(0.95, 0.95, 0.95, 1.0));
         GRAPH.with_borrow_mut(|g| {
             g.step();
             g.draw();
