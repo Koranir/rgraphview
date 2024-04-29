@@ -10,6 +10,12 @@
     <script src="https://cdn.jsdelivr.net/gh/WebCoder49/code-input@2.2/code-input.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebCoder49/code-input@2.2/code-input.min.css">
     <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
     * {
       font-family: sans-serif;
     }
@@ -18,13 +24,13 @@
 
 <body>
     <button type="submit" id="graph_input_submit" style="right: 95%; top: 5%;">Run</button>
-    <table style="bottom: 0; left: 0; right: 0; width: 100%; height: 90%">
+    <table style="width: 100%;">
         <tr>
-            <td style="width: 50%; height: 100%;"><canvas id="glcanvas" style="background: black; width: 100%; height: 100%;"></canvas></th>
-            <td style="width: 50%; height: 100%;">
+            <td style="width: 50%;"><canvas id="glcanvas" style="background: black; width: 49vw; height: 49vh;"></canvas></th>
+            <td style="width: 50%;">
               <code-input
                 id="graph_input_field"
-                style="text-align:left; height: 100%; margin: 0px;"
+                style="text-align:left; height: 49vh; width: 49vw; margin: 0px;"
                 language="js"
               >function rand(max) {
     return Math.floor(Math.random() * max);
@@ -44,9 +50,10 @@ for(let i = 0; i < 30; i++) {
             </th>
         </tr>
     </table>
-    <table style="bottom: 0; left: 0; right: 0; width: 100%; height: 90%">
+    <table style="bottom: 0; left: 0; right: 0; width: 100%; height: 45vh;">
     <tr>
-      <td style="width: 50%; height: 100%;">
+      <td style="width: 50%; vertical-text-align: top;">
+        <div style="height: 45vh;">
         <h3>Reference:</h3>
         <h4>class Graph:</h4>
         <p>static clear()</p>
@@ -67,9 +74,10 @@ for(let i = 0; i < 30; i++) {
         <p>start -> Node</p>
         <p>end -> Node</p>
         <p>data -> Any</p>
+        </div>
       </td>
-      <td style="width: 50%; height: 100%;">
-      <div id="log"></div>
+      <td style="width: 50%;">
+      <div style="width: 100%; height: 45vh; overflow: auto; vertical-text-align: top;" id="log"></div>
       </td>
     </tr>
     <script src="https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js"></script>
